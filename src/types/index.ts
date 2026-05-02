@@ -13,6 +13,8 @@ export interface CalendarFeed {
   url: string;
   name: string;
   color: string;
+  username?: string;
+  password?: string;
 }
 
 export interface AppSettings {

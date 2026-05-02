@@ -6,6 +6,21 @@ function normalizeUrl(url: string): string {
   return url.replace(/^webcal:\/\//i, 'https://');
 }
 
+function buildFetchUrl(feed: { url: string; username?: string; password?: string }, corsProxy: string): string {
+  let raw = normalizeUrl(feed.url);
+
+  if (feed.username && feed.password) {
+    try {
+      const parsed = new URL(raw);
+      parsed.username = encodeURIComponent(feed.username);
+      parsed.password = encodeURIComponent(feed.password);
+      raw = parsed.toString();
+    } catch { /* malformed URL — proceed without auth */ }
+  }
+
+  return corsProxy ? `${corsProxy}${encodeURIComponent(raw)}` : raw;
+}
+
 function parseICS(text: string, calendarIndex: number): CalendarEvent[] {
   const events: CalendarEvent[] = [];
   const now = new Date();
@@ -89,11 +104,7 @@ export function useCalendar(settings: AppSettings) {
     await Promise.all(
       settings.calendars.map(async (feed, index) => {
         try {
-          const raw = normalizeUrl(feed.url);
-          const url = settings.corsProxy
-            ? `${settings.corsProxy}${encodeURIComponent(raw)}`
-            : raw;
-
+          const url = buildFetchUrl(feed, settings.corsProxy);
           const res = await fetch(url, { cache: 'no-store' });
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           const text = await res.text();

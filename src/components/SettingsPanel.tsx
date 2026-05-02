@@ -9,18 +9,28 @@ interface Props {
   onClose: () => void;
 }
 
+const BLANK_FEED = { name: '', url: '', color: COLORS[0], username: '', password: '' };
+
 export default function SettingsPanel({ settings, onChange, onClose }: Props) {
-  const [calName, setCalName] = useState('');
-  const [calUrl, setCalUrl] = useState('');
-  const [calColor, setCalColor] = useState(COLORS[0]);
+  const [draft, setDraft] = useState({ ...BLANK_FEED });
+  const [showAuth, setShowAuth] = useState(false);
+  const [showICloudGuide, setShowICloudGuide] = useState(false);
+
+  const updateDraft = (patch: Partial<typeof draft>) =>
+    setDraft(prev => ({ ...prev, ...patch }));
 
   const addCalendar = () => {
-    if (!calUrl.trim()) return;
-    const feed: CalendarFeed = { name: calName || 'Calendar', url: calUrl.trim(), color: calColor };
+    if (!draft.url.trim()) return;
+    const feed: CalendarFeed = {
+      name: draft.name || 'Calendar',
+      url: draft.url.trim(),
+      color: draft.color,
+      ...(draft.username ? { username: draft.username.trim() } : {}),
+      ...(draft.password ? { password: draft.password.trim() } : {}),
+    };
     onChange({ calendars: [...settings.calendars, feed] });
-    setCalName('');
-    setCalUrl('');
-    setCalColor(COLORS[settings.calendars.length % COLORS.length]);
+    setDraft({ ...BLANK_FEED, color: COLORS[settings.calendars.length % COLORS.length] });
+    setShowAuth(false);
   };
 
   const removeCalendar = (i: number) =>
@@ -37,13 +47,47 @@ export default function SettingsPanel({ settings, onChange, onClose }: Props) {
         <div className="sp-body">
           {/* ── Calendars ── */}
           <section className="sp-section">
-            <h3>Calendar Feeds</h3>
+            <div className="sp-section-title-row">
+              <h3>Calendar Feeds</h3>
+              <button
+                className="icloud-guide-btn"
+                onClick={() => setShowICloudGuide(v => !v)}
+              >
+                🍎 iCloud help
+              </button>
+            </div>
+
+            {showICloudGuide && (
+              <div className="icloud-guide">
+                <p className="icloud-guide-heading">Option A — share link (recommended)</p>
+                <p className="icloud-guide-hint">Your calendar stays private; the link contains a secret token.</p>
+                <ol className="icloud-steps">
+                  <li>Open <strong>Calendar</strong> on iPhone / iPad</li>
+                  <li>Tap <strong>Calendars</strong> at the bottom</li>
+                  <li>Tap <strong>ⓘ</strong> next to your calendar</li>
+                  <li>Enable <strong>Public Calendar</strong></li>
+                  <li>Tap <strong>Share Link</strong> → Copy</li>
+                  <li>Paste the <code>webcal://</code> URL into the field below</li>
+                </ol>
+                <p className="icloud-guide-heading" style={{ marginTop: 10 }}>Option B — app-specific password</p>
+                <p className="icloud-guide-hint">Keeps the calendar fully private; no sharing required.</p>
+                <ol className="icloud-steps">
+                  <li>Go to <strong>appleid.apple.com</strong> → Sign-In &amp; Security → App-Specific Passwords</li>
+                  <li>Generate a password for "Work Calendar"</li>
+                  <li>In Calendar on Mac, right-click your calendar → <strong>Get Info</strong> — copy the CalDAV URL shown</li>
+                  <li>Enter that URL below, then expand <strong>Login details</strong> and enter your Apple ID email + the app-specific password</li>
+                </ol>
+              </div>
+            )}
 
             {settings.calendars.map((cal, i) => (
               <div key={i} className="cal-item">
                 <span className="cal-dot" style={{ background: cal.color }} />
                 <div className="cal-meta">
-                  <div className="cal-name">{cal.name}</div>
+                  <div className="cal-name">
+                    {cal.name}
+                    {cal.username && <span className="cal-auth-badge">🔒</span>}
+                  </div>
                   <div className="cal-url" title={cal.url}>{cal.url}</div>
                 </div>
                 <button className="rm-btn" onClick={() => removeCalendar(i)}>✕</button>
@@ -54,23 +98,49 @@ export default function SettingsPanel({ settings, onChange, onClose }: Props) {
               <input
                 className="sp-input"
                 placeholder="Calendar name"
-                value={calName}
-                onChange={e => setCalName(e.target.value)}
+                value={draft.name}
+                onChange={e => updateDraft({ name: e.target.value })}
               />
               <input
                 className="sp-input"
-                placeholder="iCal URL (https:// or webcal://)"
-                value={calUrl}
-                onChange={e => setCalUrl(e.target.value)}
+                placeholder="iCal / webcal URL"
+                value={draft.url}
+                onChange={e => updateDraft({ url: e.target.value })}
                 onKeyDown={e => e.key === 'Enter' && addCalendar()}
               />
+
+              <button
+                className="auth-toggle"
+                onClick={() => setShowAuth(v => !v)}
+              >
+                {showAuth ? '▾' : '▸'} Login details (iCloud Option B / private feeds)
+              </button>
+
+              {showAuth && (
+                <div className="auth-fields">
+                  <input
+                    className="sp-input"
+                    placeholder="Apple ID / username"
+                    value={draft.username}
+                    onChange={e => updateDraft({ username: e.target.value })}
+                  />
+                  <input
+                    className="sp-input"
+                    type="password"
+                    placeholder="App-specific password"
+                    value={draft.password}
+                    onChange={e => updateDraft({ password: e.target.value })}
+                  />
+                </div>
+              )}
+
               <div className="color-row">
                 {COLORS.map(c => (
                   <button
                     key={c}
-                    className={`color-swatch${calColor === c ? ' active' : ''}`}
+                    className={`color-swatch${draft.color === c ? ' active' : ''}`}
                     style={{ background: c }}
-                    onClick={() => setCalColor(c)}
+                    onClick={() => updateDraft({ color: c })}
                   />
                 ))}
               </div>
@@ -86,7 +156,8 @@ export default function SettingsPanel({ settings, onChange, onClose }: Props) {
                 onChange={e => onChange({ corsProxy: e.target.value })}
               />
               <span className="sp-hint">
-                Required for most iCal URLs. Default uses corsproxy.io — you can self-host a proxy for privacy.
+                Required to fetch iCal feeds from the browser. The default (corsproxy.io) works for
+                public URLs. For authenticated feeds, self-host a proxy that forwards credentials.
               </span>
             </div>
           </section>
@@ -145,7 +216,6 @@ export default function SettingsPanel({ settings, onChange, onClose }: Props) {
           {/* ── Display ── */}
           <section className="sp-section">
             <h3>Display</h3>
-
             <div className="sp-toggle">
               <label>24-hour clock</label>
               <input
