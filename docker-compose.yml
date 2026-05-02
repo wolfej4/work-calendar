@@ -7,9 +7,19 @@ services:
     restart: unless-stopped
     ports:
       - "8888:80"
+    depends_on:
+      - cors-proxy
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost/"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 15s
+
+  cors-proxy:
+    build:
+      context: ./proxy
+      dockerfile: Dockerfile
+    container_name: work-calendar-proxy
+    restart: unless-stopped
+    # No external port — only reachable via nginx at /proxy/

@@ -34,7 +34,7 @@ export interface AppSettings {
 
 export const DEFAULT_SETTINGS: AppSettings = {
   calendars: [],
-  corsProxy: 'https://corsproxy.io/?',
+  corsProxy: '/proxy/',
   latitude: null,
   longitude: null,
   locationName: '',

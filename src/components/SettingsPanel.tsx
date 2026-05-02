@@ -156,8 +156,9 @@ export default function SettingsPanel({ settings, onChange, onClose }: Props) {
                 onChange={e => onChange({ corsProxy: e.target.value })}
               />
               <span className="sp-hint">
-                Required to fetch iCal feeds from the browser. The default (corsproxy.io) works for
-                public URLs. For authenticated feeds, self-host a proxy that forwards credentials.
+                The default <code>/proxy/</code> uses the bundled proxy service — it runs on your
+                own network so Apple and other providers won't block it. Only change this if you
+                know what you're doing.
               </span>
             </div>
           </section>
