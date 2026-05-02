@@ -22,4 +22,8 @@ services:
       dockerfile: Dockerfile
     container_name: work-calendar-proxy
     restart: unless-stopped
-    # No external port — only reachable via nginx at /proxy/
+    volumes:
+      - calendar-data:/data   # settings.json persists here across redeploys
+
+volumes:
+  calendar-data:
