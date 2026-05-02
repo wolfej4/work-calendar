@@ -1,12 +1,8 @@
-# Portainer web-editor stack — paste this AFTER building the image on the host.
-# Build once with:  docker build -t work-calendar:latest .
-# Or run:           ./build.sh
-#
-# To rebuild (e.g. after a git pull), re-run build.sh then redeploy the stack.
-
 services:
   work-calendar:
-    image: work-calendar:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: work-calendar
     restart: unless-stopped
     ports:
